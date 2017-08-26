@@ -1,0 +1,25 @@
+{
+    "name": "tyam/fadoc",
+    "description": "Form Array to Domain Object Converter/Validator",
+    "keywords": [],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/tyam/condition",
+    "authors": [
+      {
+        "name": "YAMADA, Tetsuo",
+        "email": "tyam001@gmail.com"
+      }
+    ],
+    "require": {
+      "tyam/condition": "*"
+    }, 
+    "require-dev": {
+        "phpunit/phpunit": "*"
+    },
+    "autoload": {
+      "psr-0": {
+        "tyam\\fadoc\\": "src/"
+      }
+    }
+}
