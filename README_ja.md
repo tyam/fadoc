@@ -49,8 +49,8 @@ fadocはtyam/conditionに依存しています。
 
 ## ドキュメンテーション
 
-* wiki（日本語）
-* wiki（英語）
+* [wiki（日本語）](https://github.com/tyam/fadoc/wiki/%E3%83%9B%E3%83%BC%E3%83%A0)
+* [wiki（英語）](https://github.com/tyam/fadoc/wiki)
 
 
 ## ライセンス

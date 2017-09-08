@@ -49,8 +49,8 @@ fadoc depends on tyam/condition, which also is my library.
 
 ## Documentation
 
-* wiki (in Japanese)
-* wiki (in English)
+* [wiki (in Japanese)](https://github.com/tyam/fadoc/wiki/%E3%83%9B%E3%83%BC%E3%83%A0)
+* [wiki (in English)](https://github.com/tyam/fadoc/wiki)
 
 
 ## Lisence
