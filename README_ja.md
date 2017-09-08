@@ -1,16 +1,16 @@
 # fadoc
 
-fadoc automatically converts Form-Arrays and Domain-Objects to each other according to type declarations of methods.
+fadocはメソッドの型宣言を利用してフォーム配列とドメインオブジェクトを相互に自動変換します。
 
 
-## Feature
+## 特徴
 
-- Conversion is done automatically according to method declarations of domain objects. No Form classes.
-- You can define validation logics on domain objects.
-- Supports factories, abstract classes/interfaces.
+* ドメインオブジェクトのメソッド定義から自動的に変換が行われます。Formクラスは不要です。
+* バリデーションロジックをドメインオブジェクトに定義可能。
+* ファクトリ、抽象クラス／インターフェイスに対応。
 
 
-## Basic Usage
+## 基本的な使い方
 
 ```php
 class Point {
@@ -38,21 +38,22 @@ if ($condition->isFine()) {
 ```
 
 
-## Installation
+## インストール
 
 ```
 $ composer require tyam/fadoc
 ```
 
-fadoc depends on tyam/condition, which also is my library.
+fadocはtyam/conditionに依存しています。
 
 
-## Documentation
+## ドキュメンテーション
 
-* wiki (in Japanese)
-* wiki (in English)
+* wiki（日本語）
+* wiki（英語）
 
 
-## Lisence
+## ライセンス
 
 MIT
+

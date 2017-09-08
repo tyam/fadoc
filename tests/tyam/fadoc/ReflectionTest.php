@@ -118,4 +118,37 @@ class ReflectionTest extends TestCase
         $this->assertEquals($p1->isArray(), false);
         $this->assertEquals($p2->isArray(), false);
     }
+
+    public function funcHinted(string $a, array $b, Condition $c, $d) {}
+
+    public function testFuncHinted() {
+        $c = new \ReflectionClass($this);
+        $m = $c->getMethod('funcHinted');
+        $ps = $m->getParameters();
+        $p0 = $ps[0];
+        $p1 = $ps[1];
+        $p2 = $ps[2];
+        $p3 = $ps[3];
+
+        // isArray
+        $this->assertEquals($p0->isArray(), false);
+        $this->assertEquals($p1->isArray(), true);
+        $this->assertEquals($p2->isArray(), false);
+        $this->assertEquals($p3->isArray(), false);
+        // hasType
+        $this->assertEquals($p0->hasType(), true);
+        $this->assertEquals($p1->hasType(), true);
+        $this->assertEquals($p2->hasType(), true);
+        $this->assertEquals($p3->hasType(), false);
+        // getType
+        $this->assertEquals($p0->getType().'', 'string');
+        $this->assertEquals($p1->getType().'', 'array');
+        $this->assertEquals($p2->getType().'', 'tyam\condition\Condition');
+        $this->assertEquals($p3->getType().'', '');
+        // getClass
+        $this->assertEquals($p0->getClass(), null);
+        $this->assertEquals($p1->getClass(), null);
+        $this->assertEquals($p2->getClass(), new \ReflectionClass('tyam\condition\Condition'));
+        $this->assertEquals($p3->getClass(), null);
+    }
 }
