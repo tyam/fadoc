@@ -10,6 +10,9 @@ use LogicException;
 
 
 class Converter {
+    public const REPAIR = 1;
+    public const LENIENT = 2;
+
     /**
      * [fully-qualified-class-name => constructor-specifier, ...]
      * constructor-specifier: 
@@ -40,6 +43,11 @@ class Converter {
         //vprintf($fmt."\n", $args);
     }
 
+    protected static function testFlag($flags, $flag): bool 
+    {
+        return (($flags & $flag) != 0);
+    }
+
     protected static function getMethodSpec($action): ReflectionFunctionAbstract {
         if (is_string($action)) {
             return self::getMethodSpec([$action, '__invoke']);
@@ -62,21 +70,21 @@ class Converter {
         }
     }
 
-    public function objectize($action, $input): Condition {
+    public function objectize($action, $input, $flags = 0): Condition {
         $mrefl = self::getMethodSpec($action);
-        $cd = $this->objectizeMethod($mrefl, $input);
+        $cd = $this->objectizeMethod($mrefl, $input, $flags);
         self::debug('o: err:%d', count($cd->describe()));
         return $cd;
     }
 
-    public function validate($action, $input): Condition {
+    public function validate($action, $input, $flags = 0): Condition {
         $mrefl = self::getMethodSpec($action);
-        $cd = $this->validateMethod($mrefl, $input);
+        $cd = $this->validateMethod($mrefl, $input, $flags);
         self::debug('v: err:%d', count($cd->describe()));
         return $cd;
     }
 
-    protected function objectizeMethod(ReflectionFunctionAbstract $method, $input) {
+    protected function objectizeMethod(ReflectionFunctionAbstract $method, $input, $flags) {
         $where = $method->getDeclaringClass()->getName() . '->' . $method->getName();
         self::debug('omethod[%s]: ', $where);
         $ps = $method->getParameters();
@@ -99,7 +107,7 @@ class Converter {
                 break;
             }
             self::debug('omethod[%s]:p %d %d %s', $where, $pi, $ai, $n);
-            $cd = $this->objectizeParameter($p, $v);
+            $cd = $this->objectizeParameter($p, $v, $flags);
             if (!$cd()) {
                 $errors[$ai] = $errors[$p->getName()] = $cd->describe();
             } else {
@@ -116,7 +124,7 @@ class Converter {
         }
     }
 
-    protected function validateMethod(ReflectionFunctionAbstract $method, $input) {
+    protected function validateMethod(ReflectionFunctionAbstract $method, $input, $flags) {
         $where = $method->getDeclaringClass()->getName() . '->' . $method->getName();
         self::debug('vmethod[%s]: ', $where);
         $ps = $method->getParameters();
@@ -146,7 +154,7 @@ class Converter {
             }
         }
         self::debug('vmethod[%s]: p %pi', $where, $pi);
-        return $this->validateParameter($p, $input[$key]);
+        return $this->validateParameter($p, $input[$key], $flags);
     }
 
     protected function filterValue(ReflectionParameter $p, $cd) {
@@ -171,7 +179,7 @@ class Converter {
         }
     }
 
-    protected function objectizeParameter(ReflectionParameter $p, $v) {
+    protected function objectizeParameter(ReflectionParameter $p, $v, $flags) {
         if ($p->getClass()) {
             // class specified
             $c = $p->getClass();
@@ -183,17 +191,26 @@ class Converter {
                     // rescue. Classes with 0 parameters can be omitted.
                     $v = [];
                 } else {
+                    if (self::testFlag($flags, self::REPAIR)) {
+                        $v = [];
+                    } else {
+                        self::debug('oparameter: class arrayRequired!');
+                        return Condition::poor($this->mapError('arrayRequired'));
+                    }
+                }
+            } else if (is_string($v)) {
+                if (self::testFlag($flags, self::REPAIR)) {
+                    $v2 = [0 => $v];
+                    $v = $v2;
+                } else {
                     self::debug('oparameter: class arrayRequired!');
                     return Condition::poor($this->mapError('arrayRequired'));
                 }
-            } else if (is_string($v)) {
-                self::debug('oparameter: class arrayRequired!');
-                return Condition::poor($this->mapError('arrayRequired'));
             }
             if ($c->isAbstract() || $c->isInterface()) {
-                return $this->objectizeAbstractClass($c, $v);
+                return $this->objectizeAbstractClass($c, $v, $flags);
             } else {
-                return $this->objectizeClass($c, $v);
+                return $this->objectizeClass($c, $v, $flags);
             }
         } else if ($p->getType() == 'array') {
             // array specified
@@ -210,14 +227,28 @@ class Converter {
                 self::debug('oparameter: array asis');
                 return $this->filterValue($p, Condition::fine($v));
             } else {
-                self::debug('oparameter: array arrayRequired!');
-                return Condition::poor($this->mapError('arrayRequired'));
+                if (self::testFlag($flags, self::REPAIR)) {
+                    self::debug('oparameter: array repaired');
+                    return $this->filterValue($p, Condition::fine([$v]));
+                } else {
+                    self::debug('oparameter: array arrayRequired!');
+                    return Condition::poor($this->mapError('arrayRequired'));
+                }
             }
         } else if ($p->hasType()) {
             // scalar type specified
             if (is_array($v)) {
-                self::debug('oparameter: scalar scalarRequired!');
-                return Condition::poor($this->mapError('scalarRequired'));
+                if (self::testFlag($flags, self::REPAIR) && count($v) > 0 && is_string($v[0])) {
+                    switch ($p->getType().'') {
+                        case 'string': return $this->filterValue($p, $this->objectizeString($v[0], $flags));
+                        case 'int':    return $this->filterValue($p, $this->objectizeInt($v[0], $flags));
+                        case 'float':  return $this->filterValue($p, $this->objectizeFloat($v[0], $flags));
+                        case 'bool':   return $this->filterValue($p, $this->objectizeBool($v[0], $flags));
+                    }
+                } else {
+                    self::debug('oparameter: scalar scalarRequired!');
+                    return Condition::poor($this->mapError('scalarRequired'));
+                }
             } else if (is_null($v)) {
                 if ($p->isDefaultValueAvailable()) {
                     self::debug('oparameter: scalar defaultValue');
@@ -232,10 +263,10 @@ class Converter {
                 }
             } else {
                 switch ($p->getType().'') {
-                    case 'string': return $this->filterValue($p, $this->objectizeString($v));
-                    case 'int':    return $this->filterValue($p, $this->objectizeInt($v));
-                    case 'float':  return $this->filterValue($p, $this->objectizeFloat($v));
-                    case 'bool':   return $this->filterValue($p, $this->objectizeBool($v));
+                    case 'string': return $this->filterValue($p, $this->objectizeString($v, $flags));
+                    case 'int':    return $this->filterValue($p, $this->objectizeInt($v, $flags));
+                    case 'float':  return $this->filterValue($p, $this->objectizeFloat($v, $flags));
+                    case 'bool':   return $this->filterValue($p, $this->objectizeBool($v, $flags));
                 }
             }
         } else {
@@ -245,18 +276,23 @@ class Converter {
         }
     }
 
-    protected function validateParameter(ReflectionParameter $p, $v) {
+    protected function validateParameter(ReflectionParameter $p, $v, $flags) {
         if ($p->getClass()) {
             // class specified
             $c = $p->getClass();
             if (is_string($v)) {
-                self::debug('vparameter: class arrayRequired!');
-                return Condition::poor($this->mapError('arrayRequired'));
+                if (self::testFlag($flags, self::REPAIR)) {
+                    $v2 = [0 => $v];
+                    $v = $v2;
+                } else {
+                    self::debug('vparameter: class arrayRequired!');
+                    return Condition::poor($this->mapError('arrayRequired'));
+                }
             }
             if ($c->isAbstract() || $c->isInterface()) {
-                return $this->validateAbstractClass($c, $v);
+                return $this->validateAbstractClass($c, $v, $flags);
             } else {
-                return $this->validateClass($c, $v);
+                return $this->validateClass($c, $v, $flags);
             }
         } else if ($p->getType() == 'array') {
             // array specified
@@ -270,14 +306,23 @@ class Converter {
         } else if ($p->hasType()) {
             // scalar type specified
             if (is_array($v)) {
-                self::debug('vparameter: scalar scalrRequired!');
-                return Condition::poor($this->mapError('scalarRequired'));
+                if (self::testFlag($flags, self::REPAIR) && count($v) > 0 && is_string($v[0])) {
+                    switch ($p->getType().'') {
+                        case 'string': return $this->filterValue($p, $this->objectizeString($v[0], $flags));
+                        case 'int':    return $this->filterValue($p, $this->objectizeInt($v[0], $flags));
+                        case 'float':  return $this->filterValue($p, $this->objectizeFloat($v[0], $flags));
+                        case 'bool':   return $this->filterValue($p, $this->objectizeBool($v[0], $flags));
+                    }
+                } else {
+                    self::debug('vparameter: scalar scalrRequired!');
+                    return Condition::poor($this->mapError('scalarRequired'));
+                }
             } else {
                 switch ($p->getType().'') {
-                    case 'string': return $this->filterValue($p, $this->objectizeString($v));
-                    case 'int':    return $this->filterValue($p, $this->objectizeInt($v));
-                    case 'float':  return $this->filterValue($p, $this->objectizeFloat($v));
-                    case 'bool':   return $this->filterValue($p, $this->objectizeBool($v));
+                    case 'string': return $this->filterValue($p, $this->objectizeString($v, $flags));
+                    case 'int':    return $this->filterValue($p, $this->objectizeInt($v, $flags));
+                    case 'float':  return $this->filterValue($p, $this->objectizeFloat($v, $flags));
+                    case 'bool':   return $this->filterValue($p, $this->objectizeBool($v, $flags));
                 }
             }
         } else {
@@ -287,12 +332,15 @@ class Converter {
         }
     }
 
-    protected function objectizeInt(string $v) {
+    protected function objectizeInt(string $v, $flags) {
         if (trim($v) === '') {
             self::debug('oint: required! %s', $v);
             return Condition::poor($this->mapError('required'));
         }
         $v = trim($v);
+        if (self::testFlag($flags, self::LENIENT) && is_numeric($v)) {
+            $v = ''.intval($v);
+        }
         $i = intval($v);
         if (''.$i === $v) {
             self::debug('oint: %d', $i);
@@ -303,16 +351,23 @@ class Converter {
         }
     }
 
-    protected function objectizeBool(string $v) {
+    protected function objectizeBool(string $v, $flags) {
         $v = trim($v);
         if ($v === '') {
             self::debug('obool: required!');
             return Condition::poor($this->mapError('required'));
         }
-        if (strcasecmp($v, 'true') === 0 || strcasecmp($v, 't') === 0 || strcmp($v, '1') === 0 || strcasecmp($v, 'yes') === 0 || strcasecmp($v, 'y') === 0) {
+        if (self::testFlag($flags, self::LENIENT)) {
+            if (strcasecmp($v, 't') === 0 || strcmp($v, '1') === 0 || strcasecmp($v, 'yes') === 0 || strcasecmp($v, 'y') === 0) {
+                $v = 'true';
+            } else if (strcasecmp($v, 'f') === 0 || strcmp($v, '0') === 0 || strcasecmp($v, 'no') === 0 || strcasecmp($v, 'n') === 0) {
+                $v = 'false';
+            }
+        }
+        if (strcasecmp($v, 'true') === 0) {
             self::debug('obool: true');
             return Condition::fine(true);
-        } else if (strcasecmp($v, 'false') === 0 || strcasecmp($v, 'f') === 0 || strcmp($v, '0') === 0 || strcasecmp($v, 'no') === 0 || strcasecmp($v, 'n') === 0) {
+        } else if (strcasecmp($v, 'false') === 0) {
             self::debug('obool: false');
             return Condition::fine(false);
         } else {
@@ -321,12 +376,12 @@ class Converter {
         }
     }
 
-    protected function objectizeString(string $v) {
+    protected function objectizeString(string $v, $flags) {
         self::debug('ostring: %s', $v);
         return Condition::fine($v);
     }
 
-    protected function objectizeFloat(string $v) {
+    protected function objectizeFloat(string $v, $flags) {
         $v = trim($v);
         if ($v === '') {
             self::debug('ofloat: required!');
@@ -356,11 +411,11 @@ class Converter {
         }
     }
 
-    protected function objectizeClass(ReflectionClass $c, array $v) {
+    protected function objectizeClass(ReflectionClass $c, array $v, $flags) {
         self::debug('oclass: %s', $c->getName());
         if (isset($this->ctrmap[$c->getName()])) {
             $ctr = self::getMethodSpec($this->ctrmap[$c->getName()]);
-            $cd = $this->objectizeMethod($ctr, $v);
+            $cd = $this->objectizeMethod($ctr, $v, $flags);
             if (!$cd()) {
                 return $cd;
             } else {
@@ -371,7 +426,7 @@ class Converter {
         } else {
             $ctr = $c->getConstructor();
             if ($ctr) {
-                $cd = $this->objectizeMethod($ctr, $v);
+                $cd = $this->objectizeMethod($ctr, $v, $flags);
                 if (!$cd()) {
                     return $cd;
                 } else {
@@ -387,11 +442,11 @@ class Converter {
         }
     }
 
-    protected function validateClass(ReflectionClass $c, array $v) {
+    protected function validateClass(ReflectionClass $c, array $v, $flags) {
         self::debug('vclass: %s', $c->getName());
         if (isset($this->ctrmap[$c->getName()])) {
             $ctr = self::getMethodSpec($this->ctrmap[$c->getName()]);
-            $cd = $this->validateMethod($ctr, $v);
+            $cd = $this->validateMethod($ctr, $v, $flags);
             if (!$cd()) {
                 return $cd;
             } else {
@@ -401,7 +456,7 @@ class Converter {
         } else {
             $ctr = $c->getConstructor();
             if ($ctr) {
-                $cd = $this->validateMethod($ctr, $v);
+                $cd = $this->validateMethod($ctr, $v, $flags);
                 if (!$cd()) {
                     return $cd;
                 } else {
@@ -415,7 +470,7 @@ class Converter {
         }
     }
 
-    protected function objectizeAbstractClass($c, $v) {
+    protected function objectizeAbstractClass($c, $v, $flags) {
         if (! isset($v['__selection'])) {
             self::debug('oabstract: selection required!');
             return Condition::poor(['__selection' => $this->mapError('required')]);
@@ -424,7 +479,7 @@ class Converter {
         $className = $c->getNamespaceName().'\\'.$v['__selection'];
         if (class_exists($className)) {
             $c = new ReflectionClass($className);
-            $cd = $this->objectizeClass($c, $v[$v['__selection']]);
+            $cd = $this->objectizeClass($c, $v[$v['__selection']], $flags);
             if (!$cd()) {
                 return Condition::poor(['__selection' => $cd->describe()]);
             } else {
@@ -436,12 +491,12 @@ class Converter {
         }
     }
 
-    protected function validateAbstractClass($c, $v) {
+    protected function validateAbstractClass($c, $v, $flags) {
         $cls = array_keys($v)[0];
         $className = $c->getNamespaceName().'\\'.$cls;
         if (class_exists($className)) {
             $c = new ReflectionClass($className);
-            $cd = $this->validateClass($c, $v[$cls]);
+            $cd = $this->validateClass($c, $v[$cls], $flags);
             return $cd;
         } else {
             self::debug('vabstract: selection invalid!');

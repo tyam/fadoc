@@ -48,7 +48,7 @@ class FactoryTest extends TestCase {
     public function testObjectize0() {
         $ctrmap0 = ['tyam\fadoc\Tests\FooBar' => ['tyam\fadoc\Tests\FooBar', 'instantiate']];
         $c0 = new Converter($ctrmap0);
-        $form0 = [0 => ['foo' => '10', 'bar' => 'false', 'mutate' => 'T'], 1 => '2'];
+        $form0 = [0 => ['foo' => '10', 'bar' => 'false', 'mutate' => 'true'], 1 => '2'];
         $cd0 = $c0->objectize(['tyam\fadoc\Tests\FactoryRunner', 'requireFooBar'], $form0);
         $this->assertTrue($cd0());
         $s0 = $cd0->get()[0];
@@ -57,7 +57,7 @@ class FactoryTest extends TestCase {
 
         $ctrmap1 = ['tyam\fadoc\Tests\FooBar' => ['tyam\fadoc\Tests\Factory', 'getFooBar']];
         $c1 = new Converter($ctrmap1);
-        $form1 = [0 => [0 => 'T', 1 => '7'], 1 => '-5'];
+        $form1 = [0 => [0 => 'true', 1 => '7'], 1 => '-5'];
         $cd1 = $c1->objectize(['tyam\fadoc\Tests\FactoryRunner', 'requireFooBar'], $form1);
         $this->assertTrue($cd1());
         $s1 = $cd1->get()[0];
