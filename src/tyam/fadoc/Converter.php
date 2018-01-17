@@ -12,7 +12,9 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\NullLogger;
 
 
-class Converter implements LoggerAwareInterface {
+class Converter implements LoggerAwareInterface 
+{
+    
     public const REPAIR = 1;
     public const LENIENT = 2;
 
@@ -28,7 +30,8 @@ class Converter implements LoggerAwareInterface {
 
     private $logger;
 
-    public function __construct(array $ctrmap = [], $logger = null) {
+    public function __construct(array $ctrmap = [], LoggerInterface $logger = null) 
+    {
         $this->ctrmap = $ctrmap;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -36,15 +39,18 @@ class Converter implements LoggerAwareInterface {
         $this->logger = $logger;
     }
 
-    public function setConstructor($cls, $method) {
+    public function setConstructor($cls, $method) 
+    {
         $this->ctrmap[$cls] = $method;
     }
 
-    public function getConstructor($cls) {
+    public function getConstructor($cls) 
+    {
         return $this->ctrmap[$cls];
     }
 
-    protected function mapError($what) {
+    protected function mapError($what) 
+    {
         return $what;
     }
 
@@ -82,7 +88,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected static function getMethodSpec($action): ReflectionFunctionAbstract {
+    protected static function getMethodSpec($action): ReflectionFunctionAbstract 
+    {
         if (is_string($action)) {
             return self::getMethodSpec([$action, '__invoke']);
         } else if (is_object($action)) {
@@ -104,7 +111,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    public function objectize($action, $input, $flags = 0): Condition {
+    public function objectize($action, $input, $flags = 0): Condition 
+    {
         $this->logger->debug('objectize: starts for {action}.', ['action' => self::actionToString($action)]);
         $mrefl = self::getMethodSpec($action);
         $cd = $this->objectizeMethod($mrefl, $input, $flags);
@@ -112,7 +120,8 @@ class Converter implements LoggerAwareInterface {
         return $cd;
     }
 
-    public function validate($action, $input, $flags = 0): Condition {
+    public function validate($action, $input, $flags = 0): Condition 
+    {
         $this->logger->debug('validate: starts for {action}.', ['action' => self::actionToString($action)]);
         $mrefl = self::getMethodSpec($action);
         $cd = $this->validateMethod($mrefl, $input, $flags);
@@ -120,7 +129,8 @@ class Converter implements LoggerAwareInterface {
         return $cd;
     }
 
-    protected function objectizeMethod(ReflectionFunctionAbstract $method, $input, $flags) {
+    protected function objectizeMethod(ReflectionFunctionAbstract $method, $input, $flags) 
+    {
         $this->logger->debug('objectizeMethod: starts for {method}.', ['method' => self::reflToString($method)]);
         $ps = $method->getParameters();
         $plen = count($ps);
@@ -159,7 +169,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function validateMethod(ReflectionFunctionAbstract $method, $input, $flags) {
+    protected function validateMethod(ReflectionFunctionAbstract $method, $input, $flags) 
+    {
         $this->logger->debug('validateMethod: {method}', ['method' => self::reflToString($method)]);
         $ps = $method->getParameters();
         $plen = count($ps);
@@ -191,7 +202,8 @@ class Converter implements LoggerAwareInterface {
         return $this->validateParameter($p, $input[$key], $flags);
     }
 
-    protected function filterValue(ReflectionParameter $p, $cd) {
+    protected function filterValue(ReflectionParameter $p, $cd) 
+    {
         if (!$cd()) {
             return $cd;
         }
@@ -204,7 +216,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function getValidatorName(ReflectionParameter $p) :string {
+    protected function getValidatorName(ReflectionParameter $p) :string 
+    {
         $m = $p->getDeclaringFunction();
         if ($m->isConstructor()) {
             return "validate".ucfirst($p->getName());
@@ -213,7 +226,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function objectizeParameter(ReflectionParameter $p, $v, $flags) {
+    protected function objectizeParameter(ReflectionParameter $p, $v, $flags) 
+    {
         if ($p->getClass()) {
             // class specified
             $c = $p->getClass();
@@ -314,7 +328,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function validateParameter(ReflectionParameter $p, $v, $flags) {
+    protected function validateParameter(ReflectionParameter $p, $v, $flags) 
+    {
         if ($p->getClass()) {
             // class specified
             $c = $p->getClass();
@@ -372,7 +387,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function objectizeInt(string $v, $flags) {
+    protected function objectizeInt(string $v, $flags) 
+    {
         if (trim($v) === '') {
             $this->logger->debug("objectizeInt: required! $v");
             return Condition::poor($this->mapError('required'));
@@ -391,7 +407,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function objectizeBool(string $v, $flags) {
+    protected function objectizeBool(string $v, $flags) 
+    {
         $v = trim($v);
         if ($v === '') {
             $this->logger->debug('objectizeBool: required!');
@@ -418,12 +435,14 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function objectizeString(string $v, $flags) {
+    protected function objectizeString(string $v, $flags) 
+    {
         $this->logger->debug("objectizeString: $v");
         return Condition::fine($v);
     }
 
-    protected function objectizeFloat(string $v, $flags) {
+    protected function objectizeFloat(string $v, $flags) 
+    {
         $v = trim($v);
         if ($v === '') {
             $this->logger->debug('objectizeFloat: required!');
@@ -439,7 +458,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function detectMinArity(ReflectionClass $c) {
+    protected function detectMinArity(ReflectionClass $c) 
+    {
         if (isset($this->ctrmap[$c->getName()])) {
             $ctr = self::getMethodSpec($this->ctrmap[$c->getName()]);
             return $ctr->getNumberOfRequiredParameters();
@@ -453,7 +473,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function objectizeClass(ReflectionClass $c, array $v, $flags) {
+    protected function objectizeClass(ReflectionClass $c, array $v, $flags) 
+    {
         if (isset($this->ctrmap[$c->getName()])) {
             $ctr = self::getMethodSpec($this->ctrmap[$c->getName()]);
             $this->logger->debug("objectizeClass: map constructor of {c}", ['c' => self::reflToString($c)]);
@@ -483,7 +504,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function validateClass(ReflectionClass $c, array $v, $flags) {
+    protected function validateClass(ReflectionClass $c, array $v, $flags) 
+    {
         if (isset($this->ctrmap[$c->getName()])) {
             $ctr = self::getMethodSpec($this->ctrmap[$c->getName()]);
             $this->logger->debug("validateClass: map constructor of {c}", ['c' => self::reflToString($c)]);
@@ -510,7 +532,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function objectizeAbstractClass($c, $v, $flags) {
+    protected function objectizeAbstractClass($c, $v, $flags) 
+    {
         if (! isset($v['__selection'])) {
             $this->logger->debug('objectizeAbstractClass: selection required!');
             return Condition::poor(['__selection' => $this->mapError('required')]);
@@ -532,7 +555,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function validateAbstractClass($c, $v, $flags) {
+    protected function validateAbstractClass($c, $v, $flags) 
+    {
         $cls = array_keys($v)[0];
         $className = $c->getNamespaceName().'\\'.$cls;
         if (class_exists($className)) {
@@ -546,7 +570,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    public function formulize($action, array $args): array {
+    public function formulize($action, array $args): array 
+    {
         $this->logger->debug('formulize: starts for {action}.', ['action' => self::actionToString($action)]);
         $mrefl = self::getMethodSpec($action);
         $form = $this->formulizeMethod($mrefl, $args);
@@ -554,7 +579,8 @@ class Converter implements LoggerAwareInterface {
         return $form;
     }
 
-    protected function getGetterName(ReflectionParameter $p): string {
+    protected function getGetterName(ReflectionParameter $p): string 
+    {
         $c = $p->getDeclaringClass();
         $baseName = ucfirst($p->getName());
         if ($c->hasMethod('get'.$baseName)) {
@@ -566,7 +592,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function getExtractorName(ReflectionFunctionAbstract $ctr): string {
+    protected function getExtractorName(ReflectionFunctionAbstract $ctr): string 
+    {
         if ($ctr->getName() == '__invoke') {
             return 'extract';
         } else {
@@ -574,7 +601,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function formulizeMethod(ReflectionFunctionAbstract $method, $args) {
+    protected function formulizeMethod(ReflectionFunctionAbstract $method, $args) 
+    {
         $this->logger->debug("formulizeMethod: starts for {method}", ['method' => self::reflToString($method)]);
         
         $as = [];
@@ -605,7 +633,8 @@ class Converter implements LoggerAwareInterface {
         return $as;
     }
 
-    protected function formulizeParameter(ReflectionParameter $p, $o) {
+    protected function formulizeParameter(ReflectionParameter $p, $o) 
+    {
         $pc = $p->getClass();
         $oc = (is_object($o)) ? new ReflectionClass($o) : null;
         if ($pc && $oc && $pc != $oc) {
@@ -638,7 +667,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function formulizeClass(ReflectionClass $c, $o) {
+    protected function formulizeClass(ReflectionClass $c, $o) 
+    {
         if (isset($this->ctrmap[$c->getName()])) {
             $ctr = self::getMethodSpec($this->ctrmap[$c->getName()]);
             $this->logger->debug("formulizeClass: map constructor of {c}", ['c' => self::reflToString($c)]);
@@ -696,7 +726,8 @@ class Converter implements LoggerAwareInterface {
         }
     }
 
-    protected function formulizeArray($o) {
+    protected function formulizeArray($o) 
+    {
         $as = [];
         foreach ($o as $k => $e) {
             if (is_array($e)) {
