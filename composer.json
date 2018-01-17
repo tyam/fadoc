@@ -12,10 +12,12 @@
       }
     ],
     "require": {
-      "tyam/condition": "*"
+      "tyam/condition": "*", 
+      "Psr/Log": "*"
     }, 
     "require-dev": {
-        "phpunit/phpunit": "*"
+        "phpunit/phpunit": "*", 
+        "monolog/monolog": "^1.0"
     },
     "autoload": {
       "psr-0": {
