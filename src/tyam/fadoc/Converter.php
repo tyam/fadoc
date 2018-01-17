@@ -692,6 +692,8 @@ class Converter implements LoggerAwareInterface
                 }
             }
             return $args;
+        } else if (is_null($c->getConstructor())) {
+            return [];
         } else {
             $ctr = $c->getConstructor();
             $ps = $ctr->getParameters();

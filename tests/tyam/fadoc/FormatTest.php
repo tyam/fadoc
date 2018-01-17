@@ -9,6 +9,8 @@ use tyam\fadoc\Converter;
 class Arg0 {
     public function __construct() {}
 }
+class Arg0Woc { // Arg 0 w/o constructor
+}
 class Arg1 {
     private $val0;
     public function __construct(Arg0 $val0) {
@@ -27,6 +29,7 @@ class Arg2 {
 }
 class FormatRunner {
     public static function run(Arg2 $val0, Arg1 $val1, Arg0 $val2) {}
+    public static function run2(Arg0Woc $val0) {}
 }
 
 class FormatTest extends TestCase {
@@ -69,6 +72,14 @@ class FormatTest extends TestCase {
         $this->assertEquals(empty($es[0][0]), true);
     }
 
+    public function testObjectize2()
+    {
+        $c = new Converter();
+        $form = [0 => []];
+        $cd = $c->objectize(['\tyam\fadoc\Tests\FormatRunner', 'run2'], $form);
+        $this->assertTrue($cd());
+    }
+
     public function testFormulize0() {
         $c = new Converter();
 
@@ -80,5 +91,16 @@ class FormatTest extends TestCase {
         $this->assertTrue(is_array($form[0]));
         $this->assertTrue(is_array($form[2]));
         $this->assertEquals(count($form[2]), 0);
+    }
+
+    public function testFormulize2()
+    {
+        $c = new Converter();
+        $a0 = new Arg0Woc();
+        $form = $c->formulize(['\tyam\fadoc\Tests\FormatRunner', 'run2'], [$a0]);
+        $this->assertTrue(is_array($form));
+        $this->assertEquals(count($form), 1+1); // $form[0] and $form['val0']
+        $this->assertTrue(is_array($form[0]));
+        $this->assertEquals(count($form[0]), 0);
     }
 }
