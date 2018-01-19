@@ -67,6 +67,9 @@ class Converter implements LoggerAwareInterface
     protected static function actionToString($action): string 
     {
         if (is_array($action)) {
+            if (! is_string($action[0])) {
+                $action[0] = get_class($action[0]);
+            }
             return $action[0] . '::' . $action[1];
         } else if (! is_string($action)) {
             return $action . '';
