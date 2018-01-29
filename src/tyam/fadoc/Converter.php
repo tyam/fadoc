@@ -18,18 +18,17 @@ class Converter implements LoggerAwareInterface
     public const REPAIR = 1;
     public const LENIENT = 2;
 
-    /**
-     * [fully-qualified-class-name => constructor-specifier, ...]
-     * constructor-specifier: 
-     *   [class:string, method:string]
-     *   [class:object, method:string]
-     *   class:string  -- calls class::invoke()
-     *   class:object  -- calls $object->invoke()
-     */
     private $ctrmap;
 
     private $logger;
 
+    /**
+     * [fully-qualified-class-name => constructor-specifier, ...]
+     * constructor-specifier := [class:string, method:string]
+     *                        | [class:object, method:string]
+     *                        | class:string  -- same as [class:string, "__invoke"]
+     *                        | class:object  -- same as [class:object, "__invoke"]
+     */
     public function __construct(array $ctrmap = [], LoggerInterface $logger = null) 
     {
         $this->ctrmap = $ctrmap;

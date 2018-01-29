@@ -4,7 +4,7 @@
     "keywords": [],
     "type": "library",
     "license": "MIT",
-    "homepage": "https://github.com/tyam/condition",
+    "homepage": "https://github.com/tyam/fadoc",
     "authors": [
       {
         "name": "YAMADA, Tetsuo",
@@ -12,6 +12,7 @@
       }
     ],
     "require": {
+      "php": "^7.0", 
       "tyam/condition": "*", 
       "Psr/Log": "*"
     }, 
