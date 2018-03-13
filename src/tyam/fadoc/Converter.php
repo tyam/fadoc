@@ -154,6 +154,9 @@ class Converter implements LoggerAwareInterface
                 break;
             }
             $this->logger->debug("objectizeMethod: {method}, $pi, $ai, $n", ['method' => self::reflToString($method)]);
+            if (is_int($v) || is_bool($v) || is_float($v)) {
+                $v = "".$v;
+            }
             $cd = $this->objectizeParameter($p, $v, $flags);
             if (!$cd()) {
                 $errors[$ai] = $errors[$p->getName()] = $cd->describe();
@@ -200,8 +203,12 @@ class Converter implements LoggerAwareInterface
                 }
             }
         }
+        $v = $input[$key];
+        if (is_int($v) || is_bool($v) || is_float($v)) {
+            $v = "".$v;
+        }
         $this->logger->debug("validateMethod: $pi, {p}", ['p' => $p]);
-        return $this->validateParameter($p, $input[$key], $flags);
+        return $this->validateParameter($p, $v, $flags);
     }
 
     protected function filterValue(ReflectionParameter $p, $cd) 
