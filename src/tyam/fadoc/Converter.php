@@ -155,7 +155,7 @@ class Converter implements LoggerAwareInterface
             }
             $this->logger->debug("objectizeMethod: {method}, $pi, $ai, $n", ['method' => self::reflToString($method)]);
             if (is_int($v) || is_bool($v) || is_float($v)) {
-                $v = "".$v;
+                $v = json_encode($v);
             }
             $cd = $this->objectizeParameter($p, $v, $flags);
             if (!$cd()) {
@@ -205,7 +205,7 @@ class Converter implements LoggerAwareInterface
         }
         $v = $input[$key];
         if (is_int($v) || is_bool($v) || is_float($v)) {
-            $v = "".$v;
+            $v = json_encode($v);
         }
         $this->logger->debug("validateMethod: $pi, {p}", ['p' => $p]);
         return $this->validateParameter($p, $v, $flags);
