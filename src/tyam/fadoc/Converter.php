@@ -113,6 +113,33 @@ class Converter implements LoggerAwareInterface
         }
     }
 
+    protected static function invokeArgs($action, $args) 
+    {
+        if (is_string($action)) {
+            return self::invokeArgs([$action, '__invoke'], $args);
+        } else if (is_object($action)) {
+            return self::invokeArgs([$action, '__invoke'], $args);
+        } else if (is_array($action)) {
+            list($c, $m) = $action;
+            $crefl = new ReflectionClass($c);
+            if ($m == '__construct') {
+                $mrefl = $crefl->getConstructor();
+            } else {
+                $mrefl = $crefl->getMethod($m);
+            }
+            if (! $mrefl) {
+                throw new LogicException('method not found');
+            }
+            if (is_string($c)) {
+                return $mrefl->invokeArgs(null, $args);
+            } else {
+                return $mrefl->invokeArgs($c, $args);
+            }
+        } else {
+            throw new LogicException('action invalid');
+        }
+    }
+
     public function objectize($action, $input, $flags = 0): Condition 
     {
         $this->logger->debug('objectize: starts for {action}.', ['action' => self::actionToString($action)]);
@@ -491,7 +518,7 @@ class Converter implements LoggerAwareInterface
             if (!$cd()) {
                 return $cd;
             } else {
-                $obj = $ctr->invokeArgs(null, $cd->get());
+                $obj = self::invokeArgs($this->ctrmap[$c->getName()], $cd->get());
                 return Condition::fine($obj);
             }
         } else {
